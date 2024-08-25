@@ -39,29 +39,31 @@ contract Crowdfunding {
         require(_goal > 0, "Goal must be greater than zero.");
         
         campaignCount += 1;
-        uint256 deadline = block.timestamp + _durationInSeconds;
+        // uint256 deadline = _durationInSeconds;
         
         campaigns[campaignCount] = Campaign({
             name: _name,
             description: _description,
             benefactor: payable(msg.sender),
             goal: _goal,
-            deadline: deadline,
+            deadline: _durationInSeconds,
             amountCollected: 0,
             fundsTransferred: false
         });
 
-        emit CampaignCreated(_name, _description, campaignCount, msg.sender, _goal, deadline);
+        emit CampaignCreated(_name, _description, campaignCount, msg.sender, _goal, _durationInSeconds);
     }
 
     // Function to contribute to an active campaign
-    function contribute(uint256 _campaignId) public payable isCampaignActive(_campaignId) {
+    function contribute(uint256 _campaignId) public payable isCampaignEnded(_campaignId) {
         require(msg.value > 0, "Contribution amount must be greater than zero.");
 
         Campaign storage campaign = campaigns[_campaignId];
+
         campaign.amountCollected += msg.value;
         contributions[_campaignId][msg.sender] += msg.value;
-
+         (bool sent, ) = address(this).call{value: msg.value}("");
+        require(sent, "Failed to send Ether");
         emit DonationReceived(_campaignId, msg.sender, msg.value);
     }
 
@@ -69,10 +71,12 @@ contract Crowdfunding {
     function transferFunds(uint256 _campaignId) public isCampaignEnded(_campaignId) {
         Campaign storage campaign = campaigns[_campaignId];
         require(!campaign.fundsTransferred, "Funds have already been transferred.");
+        require(block.timestamp >= campaign.deadline, "Deadline not yet reached");
 
         uint256 amount = campaign.amountCollected;
         campaign.fundsTransferred = true;
-        campaign.benefactor.transfer(amount);
+        (bool sent, ) = campaign.benefactor.call{value: amount}("");
+        require(sent, "Failed to send Ether");
 
         emit FundsTransferred(_campaignId, campaign.benefactor, amount);
     }
