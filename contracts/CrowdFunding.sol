@@ -13,9 +13,10 @@ contract Crowdfunding {
         bool fundsTransferred;       // Whether the funds have been transferred to the benefactor
     }
     
-    mapping(uint256 => Campaign) public campaigns;
+    
     uint256 public campaignCount = 0;
 
+    mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => mapping(address => uint256)) public contributions;
 
     event CampaignCreated(string name, string description, uint256 campaignId, address benefactor, uint256 goal, uint256 deadline);
@@ -59,11 +60,10 @@ contract Crowdfunding {
         require(msg.value > 0, "Contribution amount must be greater than zero.");
 
         Campaign storage campaign = campaigns[_campaignId];
-
         campaign.amountCollected += msg.value;
         contributions[_campaignId][msg.sender] += msg.value;
-         (bool sent, ) = address(this).call{value: msg.value}("");
-        require(sent, "Failed to send Ether");
+         //(bool sent, ) = address(this).call{value: msg.value}("");
+        //require(sent, "Failed to send Ether");
         emit DonationReceived(_campaignId, msg.sender, msg.value);
     }
 
